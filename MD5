@@ -1,0 +1,14 @@
+e6f3ecce59c0e89a321afe4e74722bea *DESCRIPTION
+9405d0e5ae701caed68c72183bd2367d *NAMESPACE
+bfd6e7c3621e438f89acad0e9ff1b0d2 *R/germancredit.R
+8b887aaa4ccfd5c390217fa99e751365 *R/woe.binning.R
+94251f6b8c2dd25d7246c6271186f23c *R/woe.binning.deploy.R
+b56bb710a666aebe7b7db7a4f381ed45 *R/woe.binning.plot.R
+dfbdc5b44301e325c12cc0dbae96a6b9 *R/woe.binning.table.R
+cc0ee272efa8eb98de0388efaab66b16 *data/germancredit.RData
+2f912a27b0fb8ed1389c6ec88c847e85 *man/germancredit.Rd
+bb8e4f34447e0d6a22430f5f1786dddd *man/woe.binning.Rd
+baf69c237b9250c46705f19f30bb3294 *man/woe.binning.deploy.Rd
+5e7068f53cafec708e598b761c39f3c8 *man/woe.binning.plot.Rd
+9bea5a6ef2107eb9273d83034d8cc419 *man/woe.binning.table.Rd
+bff0066af8aeff4ca15b68c5dc7aa046 *man/woeBinning.Rd

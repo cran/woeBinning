@@ -1,0 +1,27 @@
+Package: woeBinning
+Type: Package
+Title: Supervised WOE Binning of Numeric Variables and Factors
+Version: 0.1.1
+Date: 2017-02-21
+Author: Thilo Eichenberg
+Maintainer: Thilo Eichenberg <te.r@gmx.net>
+Description: Implements an automated fine and coarse classing to bin numeric
+ variables and factors with respect to a dichotomous target variable.
+ Numeric variables are binned by merging a specified initial number of bins with
+ similar frequencies. As a start sparse bins are merged with adjacent ones.
+ Afterwards nearby bins with most similar WOE values are joined step by step until
+ the information value (IV) decreases more than specified by a percentage value.
+ Factors are binned by merging factor levels. At the beginning sparse levels are
+ merged to a 'miscellaneous' level. Afterwards bins with most similar WOE values
+ are joined step by step until the IV decreases more than specified by a percentage
+ value.
+ The package can be used with single variables or an entire data frame. It provides
+ flexible tools for exploring different binning solutions and for deploying them to
+ (new) data.
+License: GPL (>= 2)
+LazyData: TRUE
+RoxygenNote: 5.0.1
+NeedsCompilation: no
+Packaged: 2017-02-21 09:41:26 UTC; Thilo
+Repository: CRAN
+Date/Publication: 2017-02-21 11:41:15
