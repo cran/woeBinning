@@ -7,20 +7,21 @@
 woe.binning.table(binning)
 }
 \arguments{
-\item{binning}{Binning information generated from the \code{\link{woe.binning}} function.
+\item{binning}{Binning information generated from the \code{woe.binning} or \code{woe.tree.binning} function.
 Contains names of the input predictor variables and the
 corresponding binning, counts, WOE and IV information, which is used to
 generate the tables.}
 }
 \description{
-\code{woe.binning.table} tabulates the binning solution generated and saved via the \code{\link{woe.binning}} function.
+\code{woe.binning.table} tabulates the binning solution generated and saved via the \code{\link{woe.binning}}
+ or \code{\link{woe.tree.binning}} function.
 }
 \details{
 For each predictor variable \code{woe.binning.table} generates a table (data frame).
 This table contains the final bin labels, total counts, total distribution (column percentages),
 counts for the first and the second target class, distribution of the first and the second target
 class (column percentages), rate (row percentages) of the target event specified via the
-\emph{event.class} parameter in the \code{woe.binning} function, as well as weight of evidence
+\emph{event.class} parameter in the \code{woe.binning} or \code{woe.tree.binning} function, as well as weight of evidence
 (WOE) and information values (IV).
 }
 \examples{
@@ -46,15 +47,10 @@ library(gridExtra)
 grid.table(tabulate.binning[[1]],
           theme = ttheme_default(core=list(bg_params=
                   list(fill=c(rep(c('grey95','grey90'),
-               length.out=nrow(tabulate.binning[[1]])-1),
+                  length.out=nrow(tabulate.binning[[1]])-1),
                   '#BCC7BD')),fg_params=list(cex=0.8)),
-               colhead=list(fg_params=list(cex=0.8))),
-          rows=NULL)
+                  colhead=list(fg_params=list(cex=0.8))),
+                  rows=NULL)
 }
 
 }
-\seealso{
-Other woe.binning.functions: \code{\link{woe.binning.deploy}},
-  \code{\link{woe.binning.plot}}, \code{\link{woe.binning}}
-}
-

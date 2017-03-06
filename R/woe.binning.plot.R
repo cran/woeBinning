@@ -56,7 +56,8 @@ woe.binning.plot.2 <- function(pred.var, look.up.table, multiple.plots) {
 #' @title Visualization of Binning
 #'
 #' @description
-#' \code{woe.binning.plot} visualizes the binning solution generated and saved via the \code{\link{woe.binning}} function.
+#' \code{woe.binning.plot} visualizes the binning solution generated and saved via the \code{\link{woe.binning}}
+#' or \code{\link{woe.tree.binning}} function.
 #'
 #' @details
 #' For each predictor variable \code{woe.binning.plot} generates a weight of evidence
@@ -67,7 +68,7 @@ woe.binning.plot.2 <- function(pred.var, look.up.table, multiple.plots) {
 #' woe.binning.plot(binning, multiple.plots, plot.range)
 #'
 #' @param binning
-#' Binning information generated from the \code{\link{woe.binning}} function.
+#' Binning information generated from the \code{woe.binning} or \code{woe.tree.binning} function.
 #' Contains names of the input predictor variables and the
 #' corresponding binning, WOE and IV information, which is used to
 #' generate the WOE and IV plots.
@@ -82,8 +83,6 @@ woe.binning.plot.2 <- function(pred.var, look.up.table, multiple.plots) {
 #' will generate WOE plots and one IV plot for the ten variables with the
 #' highest IV values, \dQuote{11:20} for the next ten variables and so on.
 #' Just omit this parameter to visualize all binned variables (default).
-#' 
-#' @family woe binning functions
 #' 
 #' @examples
 #' # Load German credit data

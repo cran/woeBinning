@@ -1,23 +1,24 @@
 \name{woeBinning}
 \docType{package}
 \alias{woeBinning}
-\title{Package for Supervised WOE Binning}
+\title{Package for Supervised Weight of Evidence Binning}
 \description{
 This package generates, visualizes, tabulates and deploys a supervised weight of evidence (WOE) binning of variables.
 }
 \details{
-The package \code{woeBinning} adapts and automates the process of fine and coarse
-classing and bins numeric variables and factors with respect to a dichotomous
-target variable. Additionally, it visualizes the realized binning solution,
-tabulates it and deploys it to (new) data. All functions can be used with single
-variables or an entire data frame.
+The package \code{woeBinning} automates the process of binning of numeric
+variables and factors with respect to a dichotomous target variable.
+Additionally, it visualizes the realized binning solution, tabulates it and
+deploys it to (new) data. All functions can be used with single variables
+or an entire data frame.
 }
 \section{Binning Functions}{
 \itemize{ 
-   \item \code{\link{woe.binning}} generates a supervised binning of numeric variables and factors. 
-   \item \code{\link{woe.binning.plot}} visualizes the binning solution generated and saved via \code{woe.binning}. 
-   \item \code{\link{woe.binning.table}} tabulates the binning solution generated and saved via \code{woe.binning}. 
-   \item \code{\link{woe.binning.deploy}} deploys the binning solution generated and saved via \code{woe.binning} to (new) data. 
+   \item \code{\link{woe.binning}} generates a supervised fine and coarse classing of numeric variables and factors.
+   \item \code{\link{woe.tree.binning}} generates a supervised tree-like segmentation of numeric variables and factors.    
+   \item \code{\link{woe.binning.plot}} visualizes the binning solution generated and saved via \code{woe.binning} or \code{woe.tree.binning}. 
+   \item \code{\link{woe.binning.table}} tabulates the binning solution generated and saved via \code{woe.binning} or \code{woe.tree.binning}. 
+   \item \code{\link{woe.binning.deploy}} deploys the binning solution generated and saved via \code{woe.binning} or \code{woe.tree.binning} to (new) data. 
 }
 }
 \references{

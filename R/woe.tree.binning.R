@@ -1,11 +1,11 @@
-##### This is the actual binning function for numeric variables and factors. #####
+##### This is the actual tree-like binning function for numeric variables and factors. #####
 
-woe.binning.2 <- function(df, target.var, pred.var, min.perc.total, min.perc.class, stop.limit, abbrev.fact.levels, bad, good) {
+woe.tree.binning.2 <- function(df, target.var, pred.var, min.perc.total, min.perc.class, stop.limit, abbrev.fact.levels, bad, good) {
 
 
 #### Build subsets with target and predictor variable
 df <- df[, c(target.var, pred.var)]  # used for final binning
-dfrm <- df[, c(target.var, pred.var)]   # used for iterative merging of bins
+dfrm <- df[, c(target.var, pred.var)]   # used for iterative merging and splitting of bins
 colnames(dfrm)[1] <- paste("target.var")
 colnames(dfrm)[2] <- paste("predictor.var")
 
@@ -121,97 +121,89 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 	}
 
 
-	## After sparse bins are merged:
-	## Merge bins with similar WOE values and calculate corresponding WOE table and IV step by step
-	## until 2 bins are left (i.e. 3 cutpoints: -Inf, middle cutpoint, +Inf)
+	## After sparse levels are merged:
+	## Tree-based iterative partitioning of bins until IV based stop criteria is reached
+	## or 2 aggregated bins are left (i.e. 3 cutpoints: -Inf, middle cutpoint, +Inf).
+
+	innercutpoints <- cutpoints[2:(length(cutpoints)-1)]
 	
-	while ( length(cutpoints)>2 ) {
+	if ( length(cutpoints)>2 ) {
 	
-		# Compute binned variable from cutpoints and add it to the subset data frame
-		dfrm$predictor.var.binned <- cut(dfrm$predictor.var, cutpoints, labels = NULL,
-	    		include.lowest = FALSE, right = TRUE, dig.lab = 10,
-			ordered_result = TRUE)
-		
-		# Compute crosstab from binned variable and target variable and covert it to a data frame
-		freq.table <- table(dfrm$predictor.var.binned, dfrm$target.var, useNA="always")
-		row.names(freq.table)[is.na(row.names(freq.table))] <- 'Missing'   # Replace NA in row.names with string 'Missing'
-		woe.dfrm <- as.data.frame.matrix(freq.table)   # Convert frequency table to data frame
-		woe.dfrm <- woe.dfrm[, c(good, bad)]   # Select columns with raw frequencies only
-		
-		# Compute WOE and information value (IV) from crosstab frequencies
-		woe.dfrm$col.perc.a <- woe.dfrm[,1]/sum(woe.dfrm[,1])
-		woe.dfrm$col.perc.b <- woe.dfrm[,2]/sum(woe.dfrm[,2])
-		# Correct column percents in case of 0 frequencies (skip NA row)
-		# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
-		if ( !anyNA(df[,2]) ) {
-			if ( min(woe.dfrm[-nrow(woe.dfrm),1],na.rm=TRUE)==0 | min(woe.dfrm[-nrow(woe.dfrm),2],na.rm=TRUE)==0 ) {
-				woe.dfrm$col.perc.a[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)
-				woe.dfrm$col.perc.b[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)	
+		for (i in 1:(length(innercutpoints)-1)) {
+
+			for (i in 1:length(innercutpoints)) {
+			
+				if ( exists('selected.cuts') ) {
+					pred.var.cut <- cut(dfrm$predictor.var, c(-Inf, selected.cuts, innercutpoints[i], Inf), labels=NULL, include.lowest=FALSE, right=TRUE, dig.lab=10, ordered_result=TRUE)
+				} else {
+					pred.var.cut <- cut(dfrm$predictor.var, c(-Inf, innercutpoints[i], Inf), labels=NULL, include.lowest=FALSE, right=TRUE, dig.lab=10, ordered_result=TRUE)
+				}
+			
+				freq.table <- table(pred.var.cut, dfrm$target.var, useNA="always")
+				row.names(freq.table)[is.na(row.names(freq.table))] <- 'Missing'   # Replace NA in row.names with string 'Missing'
+				woe.dfrm <- as.data.frame.matrix(freq.table)   # Convert frequency table to data frame
+				woe.dfrm <- woe.dfrm[, c(good, bad)]   # Select columns with raw frequencies only
+				woe.dfrm$col.perc.a <- woe.dfrm[,1]/sum(woe.dfrm[,1])
+				woe.dfrm$col.perc.b <- woe.dfrm[,2]/sum(woe.dfrm[,2])
+				woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
+				woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+				woe.dfrm$iv.bins <- (woe.dfrm$col.perc.a-woe.dfrm$col.perc.b)*woe.dfrm$woe/100
+				iv.total <- sum(woe.dfrm$iv.bins, na.rm=TRUE)
+				ifelse (exists('iv.total.collect'), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
+				
 			}
-		} else {
-			if ( min(woe.dfrm[,1],na.rm=TRUE)==0 | min(woe.dfrm[,2],na.rm=TRUE)==0 ) {
-				woe.dfrm$col.perc.a <- (woe.dfrm$col.perc.a+0.0001)/sum(woe.dfrm$col.perc.a+0.0001)
-				woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
+
+			# Restore former solution in case stop criteria is reached and exit loop
+			if ( exists('max.iv.total.collect.backup') ) {
+				if ( (max.iv.total.collect.backup+max.iv.total.collect.backup*stop.limit)>max(iv.total.collect) ) {
+					innercutpoints <- innercutpoints.backup
+					break
+				}
 			}
-		}
-		woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
-		woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
-		woe.dfrm$woe.lag <- c(NA, embed(woe.dfrm$woe,2)[,2])
-		woe.dfrm$woe.diff <- abs(woe.dfrm$woe-woe.dfrm$woe.lag)
-		woe.dfrm$iv.bins <- (woe.dfrm$col.perc.a-woe.dfrm$col.perc.b)*woe.dfrm$woe/100
-					
-		# Calculate total IV for current binning
-		iv.total <- sum(woe.dfrm$iv.bins, na.rm=TRUE)
 
-		# Collect total IVs for different binning solutions
-		ifelse (exists('iv.total.collect'), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
-		
-		# In case IV decreases by more than percentage specified by stop.limit parameter above
-		# restore former binning solution (cutpoints) and leave loop
-		if ( length(iv.total.collect)>1 ) {
-			actual.iv.decrease <- ((iv.total.collect[length(iv.total.collect)-1]-iv.total.collect[length(iv.total.collect)])/(iv.total.collect[length(iv.total.collect)-1]))
+			# Backups to be able to restore former solution in case stop criteria is reached
+			max.iv.total.collect.backup <- max(iv.total.collect)
+			innercutpoints.backup <- innercutpoints
+			
+			# Get index of cutpoint with highest IV and reset iv.total.collect
+			index.optimal.cut <- which(iv.total.collect==max(iv.total.collect))[1]
+			iv.total.collect <- NULL
 
-			if ( (actual.iv.decrease>stop.limit) && (exists('stop.limit.exceeded')==FALSE) ) {
-				cutpoints.final <- cutpoints.backup
-				woe.dfrm.final <- woe.dfrm.backup
-				stop.limit.exceeded <- TRUE   # indicates that stop limit is exceeded to prevent overriding the final solution
-			}
-		}
-		
-		# Save first cutpoint solution and corresponding WOE values as final solution (is used in case no WOE merging will be applied)
-		if ( exists('cutpoints.backup')==FALSE ) {
-			cutpoints.final <- cutpoints
-			woe.dfrm.final <- woe.dfrm
+			# collect and sort selected cuts
+			ifelse (exists('selected.cuts'), selected.cuts <- cbind(selected.cuts, innercutpoints[index.optimal.cut[sort.list(index.optimal.cut)]]), selected.cuts <- innercutpoints[index.optimal.cut[sort.list(index.optimal.cut)]])
+			selected.cuts <- sort(selected.cuts)
+			selected.cuts <- unique(selected.cuts)
+
+			# Remove selected cutpoint from cutpoint list
+			innercutpoints <- innercutpoints[-index.optimal.cut]
+
 		}
 
-		# Saves binning solution after last merging step in case the IV stop limit was not exceeded
-		if ( (exists('stop.limit.exceeded')==FALSE) && (length(cutpoints)==3) ) {
-			cutpoints.final <- cutpoints
-			woe.dfrm.final <- woe.dfrm
-		}
-		
-		# Save backups of current cutpoints and corresponding WOE values before merging to be able to retrieve solution in case IV decrease is too strong
-		cutpoints.backup <- cutpoints
-		woe.dfrm.backup <- woe.dfrm
-
-		# Determine the index of the minimum WOE difference between adjacent bins and
-		# merge bins with minimum WOE difference (apart from the last 'Missing' bin)	
-		min.woe.diff <- which(woe.dfrm$woe.diff[-nrow(woe.dfrm)]==min(woe.dfrm$woe.diff[-nrow(woe.dfrm)], na.rm=TRUE))
-		cutpoints <- cutpoints[-c(min.woe.diff)]
+			#print(selected.cuts)
+			pred.var.cut <- cut(dfrm$predictor.var, c(-Inf, selected.cuts, Inf), labels = NULL, include.lowest = FALSE, right = TRUE, dig.lab = 10, ordered_result=TRUE)
+			freq.table <- table(pred.var.cut, dfrm$target.var, useNA="always")
+			row.names(freq.table)[is.na(row.names(freq.table))] <- 'Missing'   # Replace NA in row.names with string 'Missing'
+			woe.dfrm.final <- as.data.frame.matrix(freq.table)   # Convert frequency table to data frame
+			woe.dfrm.final <- woe.dfrm.final[, 1:2]   # Select columns with raw frequencies only
+			woe.dfrm.final$col.perc.a <- woe.dfrm.final[,1]/sum(woe.dfrm.final[,1])
+			woe.dfrm.final$col.perc.b <- woe.dfrm.final[,2]/sum(woe.dfrm.final[,2])
 		
 	}
 
-
-	## Compute final IV
-	iv.total.final <- sum(woe.dfrm.final$iv.bins, na.rm=TRUE)
-		
-	## Save final binning solution via look-up-table for deployment
-	lower.cutpoints.final.dfrm <- as.data.frame(cutpoints.final)
+	woe.dfrm.final$woe <- 100*log(woe.dfrm.final$col.perc.a/woe.dfrm.final$col.perc.b)
+	woe.dfrm.final$woe[is.finite(woe.dfrm.final$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+	woe.dfrm.final$iv.bins <- (woe.dfrm.final$col.perc.a-woe.dfrm.final$col.perc.b)*woe.dfrm.final$woe/100
+	# Add cutpoints needed for deployment
+	cutpoints.final <- c(-Inf, selected.cuts, Inf)
+	woe.dfrm.final$cutpoints.final <- cutpoints.final
 	upper.cutpoints.final.dfrm <- rbind(as.data.frame(cutpoints.final[-1]),'Missing')
-	look.up.table <- cbind(woe.dfrm.final[, 5,drop=FALSE], lower.cutpoints.final.dfrm, upper.cutpoints.final.dfrm)
+	woe.dfrm.final <- cbind(woe.dfrm.final, upper.cutpoints.final.dfrm)
+	# Compute final IV
+	iv.total.final <- sum(woe.dfrm.final$iv.bins, na.rm=TRUE)
+	woe.dfrm.final$iv.total.final <- iv.total.final
+	## Save final binning solution via look-up-table for deployment
+	look.up.table <- woe.dfrm.final[,c(5,7:9,1:4,6)]
 	if ( look.up.table[nrow(look.up.table),1]==0 ) { look.up.table[nrow(look.up.table),1] <- NA }   # replace WOE=0 in Missing row with NA (because this only occurs in case Missing Data does not occur during binning)
-	look.up.table <- cbind.data.frame(look.up.table, iv.total.final, woe.dfrm.final[, c(1,2,3,4,8),drop=FALSE])   # add column with final total Information Value
-
 
 }
 
@@ -271,157 +263,159 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 	levels(dfrm$predictor.var.binned)[levels(dfrm$predictor.var.binned)%in%(row.names(woe.dfrm.sparse.subset.pos))] <- "misc. level pos."
 	levels(dfrm$predictor.var.binned)[levels(dfrm$predictor.var.binned)%in%(row.names(woe.dfrm.sparse.subset.neg))] <- "misc. level neg."
 
-	
+
 	## After sparse levels are merged:
-	## Merge levels with similar WOE values and calculate corresponding WOE table and IV step by step until
-	## 2 regular bins (+ Missing or 'misc. level') are left
+	## Tree-based partitioning of bins sorted by WOE vales
 
-	while ( length(levels(dfrm$predictor.var.binned))>3 ) {
-	
-		# Compute crosstab from binned variable and target variable and covert it to a data frame
-		freq.table <- table(dfrm$predictor.var.binned, dfrm$target.var)
-		#row.names(freq.table)[is.na(row.names(freq.table))] <- 'Missing'   # Replace NA in row.names with string 'Missing'
-		woe.dfrm <- as.data.frame.matrix(freq.table)   # Convert frequency table to data frame
-		woe.dfrm <- woe.dfrm[, c(good, bad)]   # Select columns with raw frequencies only
-
-		
-		# Compute WOE and information value (IV) from crosstab frequencies
-		woe.dfrm$col.perc.a <- woe.dfrm[,1]/sum(woe.dfrm[,1])
-		woe.dfrm$col.perc.b <- woe.dfrm[,2]/sum(woe.dfrm[,2])
-		# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
-		if ( !anyNA(df[,2]) ) {
-			if ( min(woe.dfrm[-nrow(woe.dfrm),1],na.rm=TRUE)==0 | min(woe.dfrm[-nrow(woe.dfrm),2],na.rm=TRUE)==0 ) {
-				woe.dfrm$col.perc.a[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)
-				woe.dfrm$col.perc.b[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)	
-			}
-		} else {
-			if ( min(woe.dfrm[,1],na.rm=TRUE)==0 | min(woe.dfrm[,2],na.rm=TRUE)==0 ) {
-				woe.dfrm$col.perc.a <- (woe.dfrm$col.perc.a+0.0001)/sum(woe.dfrm$col.perc.a+0.0001)
-				woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
-			}
-		}
-		woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
-		woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
-		woe.dfrm <- woe.dfrm[order(woe.dfrm$woe),]   # sort data via WOE values
-		woe.dfrm$woe.lag <- c(NA, embed(woe.dfrm$woe,2)[,2])
-		woe.dfrm$woe.diff <- abs(woe.dfrm$woe-woe.dfrm$woe.lag)
-		woe.dfrm$iv.bins <- (woe.dfrm$col.perc.a-woe.dfrm$col.perc.b)*woe.dfrm$woe/100
-		
-		# Calculate total IV for current binning
-		iv.total <- sum(woe.dfrm$iv.bins, na.rm=TRUE)
-		
-		# Collect total IVs for different binning solutions
-		ifelse (exists('iv.total.collect'), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
-		
-		# In case IV decreases by more than percentage specified by stop.limit parameter above
-		# restore former binning solution (cutpoints) and leave loop
-		if ( length(iv.total.collect)>1 ) {
-			actual.iv.decrease <- ((iv.total.collect[length(iv.total.collect)-1]-iv.total.collect[length(iv.total.collect)])/(iv.total.collect[length(iv.total.collect)-1]))
-			if ( (actual.iv.decrease>stop.limit) && (exists('stop.limit.exceeded')==FALSE) ) {
-				stop.limit.exceeded <- TRUE   # indicates that stop limit is exceeded to prevent overriding the final solution
-			}
-		}
-		
-		# Merge until 2 regular bins remain
-		
-		if ( length(levels(dfrm$predictor.var.binned))>3 ) {
-			
-			# Merge levels with most similar WOE values
-			min.woe.diff <- which(woe.dfrm$woe.diff==min(woe.dfrm$woe.diff, na.rm=TRUE))
-			levels(dfrm$predictor.var.binned)[levels(dfrm$predictor.var.binned)%in%c(row.names(woe.dfrm)[min.woe.diff],row.names(woe.dfrm)[min.woe.diff-1])] <- paste(row.names(woe.dfrm)[min.woe.diff], "+", row.names(woe.dfrm)[min.woe.diff-1])
-			
-			# Save names of the factor levels that are merged
-			list.level.a <- as.list(row.names(woe.dfrm)[min.woe.diff])
-			list.level.b <- as.list(row.names(woe.dfrm)[min.woe.diff-1])
-			
-			# Collect names of the factor levels that are merged in lists (until stop criteria is reached)
-			if ( exists('list.level.a.collected')==FALSE ) {
-				list.level.a.collected <- list.level.a
-				list.level.b.collected <- list.level.b
-			}
-			else {
-				if ( exists('stop.limit.exceeded')==FALSE ) {
-					list.level.a.collected <- c(list.level.a.collected, list.level.a)
-					list.level.b.collected <- c(list.level.b.collected, list.level.b)
-				}
-				else {
-					list.level.a.collected <- list.level.a.collected[1:length(list.level.a.collected)-1]
-					list.level.b.collected <- list.level.b.collected[1:length(list.level.b.collected)-1]
-				}
-			}
-	
-		}
-
-	
-	}
-	
-	### Apply FINAL binning to INPUT data
-	
-	## Merge factor levels
-	# Merge sparse levels
-	levels(df[,ncol(df)])[levels(df[,ncol(df)])%in%(row.names(woe.dfrm.sparse.subset.pos))] <- "misc. level pos."
-	levels(df[,ncol(df)])[levels(df[,ncol(df)])%in%(row.names(woe.dfrm.sparse.subset.neg))] <- "misc. level neg."
-	# Merge levels with similar WOE values
-	if ( exists('list.level.a.collected')==TRUE ) {
-		for ( i in 1:length(list.level.a.collected) ) {
-			levels(df[,ncol(df)])[levels(df[,ncol(df)])%in%c(list.level.a.collected[i],list.level.b.collected[i])] <- paste(list.level.a.collected[i], "+", list.level.b.collected[i])
-		}
-	}
-
-	## Repeat generating WOE table for selected binning solution
-	
 	# Compute crosstab from binned variable and target variable and covert it to a data frame
-	freq.table.final <- table(df[,ncol(df)], dfrm$target.var)
-	#row.names.final(freq.table.final)[is.na(row.names(freq.tabl.finale))] <- 'Missing'   # replace NA in row.names with string 'Missing'
-	woe.dfrm.final <- as.data.frame.matrix(freq.table.final)   # convert frequency table to data frame
-	woe.dfrm.final <- woe.dfrm.final[, c(good, bad)]   # Select columns with raw frequencies only
-
+	freq.table <- table(dfrm$predictor.var.binned, dfrm$target.var)
+	#row.names(freq.table)[is.na(row.names(freq.table))] <- 'Missing'   # Replace NA in row.names with string 'Missing'
+	woe.dfrm <- as.data.frame.matrix(freq.table)   # Convert frequency table to data frame
+	woe.dfrm <- woe.dfrm[, c(good, bad)]   # Select columns with raw frequencies only
 	# Compute WOE and information value (IV) from crosstab frequencies
-	woe.dfrm.final$col.perc.a <- woe.dfrm.final[,1]/sum(woe.dfrm.final[,1])
-	woe.dfrm.final$col.perc.b <- woe.dfrm.final[,2]/sum(woe.dfrm.final[,2])
+	woe.dfrm$col.perc.a <- woe.dfrm[,1]/sum(woe.dfrm[,1])
+	woe.dfrm$col.perc.b <- woe.dfrm[,2]/sum(woe.dfrm[,2])
 	# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
 	if ( !anyNA(df[,2]) ) {
-		if ( min(woe.dfrm.final[-nrow(woe.dfrm.final),1],na.rm=TRUE)==0 | min(woe.dfrm.final[-nrow(woe.dfrm.final),2],na.rm=TRUE)==0 ) {
-			woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)] <- (woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)]+0.0001)/sum(woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)]+0.0001)
-			woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)] <- (woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)]+0.0001)/sum(woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)]+0.0001)	
+		if ( min(woe.dfrm[-nrow(woe.dfrm),1],na.rm=TRUE)==0 | min(woe.dfrm[-nrow(woe.dfrm),2],na.rm=TRUE)==0 ) {
+			woe.dfrm$col.perc.a[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)
+			woe.dfrm$col.perc.b[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)	
 		}
 	} else {
-		if ( min(woe.dfrm.final[,1],na.rm=TRUE)==0 | min(woe.dfrm.final[,2],na.rm=TRUE)==0 ) {
-			woe.dfrm.final$col.perc.a <- (woe.dfrm.final$col.perc.a+0.0001)/sum(woe.dfrm.final$col.perc.a+0.0001)
-			woe.dfrm.final$col.perc.b <- (woe.dfrm.final$col.perc.b+0.0001)/sum(woe.dfrm.final$col.perc.b+0.0001)	
+		if ( min(woe.dfrm[,1],na.rm=TRUE)==0 | min(woe.dfrm[,2],na.rm=TRUE)==0 ) {
+			woe.dfrm$col.perc.a <- (woe.dfrm$col.perc.a+0.0001)/sum(woe.dfrm$col.perc.a+0.0001)
+			woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
 		}
 	}
-	woe.dfrm.final$woe <- 100*log(woe.dfrm.final$col.perc.a/woe.dfrm.final$col.perc.b)
-	woe.dfrm.final$woe[is.finite(woe.dfrm.final$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
-	woe.dfrm.final <- woe.dfrm.final[order(woe.dfrm.final$woe),]   # sort data via WOE values
-	woe.dfrm.final$iv.bins <- (woe.dfrm.final$col.perc.a-woe.dfrm.final$col.perc.b)*woe.dfrm.final$woe/100	
-	iv.total.final <- sum(woe.dfrm.final$iv.bins, na.rm=TRUE)
+	woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
+	woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+	woe.dfrm <- woe.dfrm[order(woe.dfrm$woe),]   # sort data via WOE values
+	woe.dfrm$iv.bins <- (woe.dfrm$col.perc.a-woe.dfrm$col.perc.b)*woe.dfrm$woe/100
 
-
-	## Add variable with corresponding WOE values for final binning
+	# In case there are more than 2 regulare bins (+ Missing bin) left:
+	# iterative split bins into binary subsets (tree-like, i.e. 1. split
+	# -> 2 aggregated bins, 2. split -> 3 aggregated bins, etc.) and realize
+	# solution with total IV value that fullfills the stop crieria
+	if ( (anyNA(df[,2]) && nrow(woe.dfrm)>3) || (!anyNA(df[,2]) && nrow(woe.dfrm)>2) )  {
+		for ( i in 1:1:(nrow(woe.dfrm-2)) ) {
+			for ( i in 1:(nrow(woe.dfrm)-1) ) {
+				woe.dfrm$trycut[1:i] <- 'a'   # 1. node
+				woe.dfrm$trycut[(i+1):nrow(woe.dfrm)] <- 'b'   # 2. node
+				if ( !'cut' %in% names(woe.dfrm) ) {
+					woe.dfrm.try <- aggregate(woe.dfrm[,3:4], by=list(woe.dfrm$trycut), 'sum')
+				} else {
+					woe.dfrm.try <- aggregate(woe.dfrm[,3:4], by=list(woe.dfrm$trycut, woe.dfrm$cut), 'sum')
+				}
+				woe.dfrm.try$woe <- 100*log(woe.dfrm.try$col.perc.a/woe.dfrm.try$col.perc.b)
+				woe.dfrm.try$woe[is.finite(woe.dfrm.try$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+				woe.dfrm.try$iv.bins <- (woe.dfrm.try$col.perc.a-woe.dfrm.try$col.perc.b)*woe.dfrm.try$woe/100
+				iv.total <- sum(woe.dfrm.try$iv.bins, na.rm=TRUE)
+				ifelse (exists('iv.total.collect'), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
+			}
+			
+			index.optimal.cut <- which(iv.total.collect==max(iv.total.collect))[1]
 	
-	# Save row order of input data as ID variable
-	df$initial.order.id  <- 1:nrow(df)
-	
-	# Add final binned (numerical) variable with WOE values (via left join with WOE table)
-	df <- merge(df, woe.dfrm.final[,5,drop=FALSE], by.x=colnames(df)[ncol(df)-1], by.y=0, all.x=TRUE)
-	colnames(df)[ncol(df)] <- paste(pred.var,".binned.woe",sep="")
-	
-	# Restore initial column and row order and get rid of initial.order.id and row names
-	df <- df[order(df$initial.order.id), ]
-	df <- subset(df, select=c(2:(ncol(df)-2),1,ncol(df)))
-	row.names(df) <- NULL
+			# Restore former solution in case stop criteria is reached and exit loop
+			if ( exists('max.iv.total.collect.backup') ) {
+				if ( (max.iv.total.collect.backup+max.iv.total.collect.backup*stop.limit)>max(iv.total.collect) ) {
+					break
+				}
+			}	
+		
+			# Backup to be able to restore former solution in case stop criteria is reached
+			max.iv.total.collect.backup <- max(iv.total.collect)
+		
+			iv.total.collect <- NULL
+			
+			woe.dfrm$cuttemp <- 'm'   # all incl. Missing
+			woe.dfrm$cuttemp[1:index.optimal.cut] <- 'a'   # 1. node
+			woe.dfrm$cuttemp[(index.optimal.cut+1):nrow(woe.dfrm)] <- 'b'   # 2. node
+			
+			if ( !'cut' %in% names(woe.dfrm) ) {
+				woe.dfrm$cut <- woe.dfrm$cuttemp
+			} else {
+				woe.dfrm$cut <- paste(woe.dfrm$cut, woe.dfrm$cuttemp, sep="")
+			}
+			
+		}
+	}
 
+	woe.dfrm$Group.1 <- row.names(woe.dfrm)
+	woe.dfrm$Group.2 <- row.names(woe.dfrm)
+	
+	# Merge names of factor levels to be joined in a new variable
+	if ( (anyNA(df[,2]) && nrow(woe.dfrm)>3) || (!anyNA(df[,2]) && nrow(woe.dfrm)>2) )  {
+		for ( i in (nrow(woe.dfrm)-1):1 ) {
+			if ( woe.dfrm$cut[i]==woe.dfrm$cut[i+1] ) {
+				woe.dfrm$Group.2[i] <- paste(row.names(woe.dfrm)[i], "+", woe.dfrm$Group.2[i+1])
+			}
+		}
+		for ( i in 2:nrow(woe.dfrm) ) {
+			if ( woe.dfrm$cut[i]==woe.dfrm$cut[i-1] ) {
+				woe.dfrm$Group.2[i] <- woe.dfrm$Group.2[i-1]
+			}
+		}
+	} else {   # In case of only 2 regular bins (+ 1 missing data bin) build the data frame structure that is expected by the final procedure
+		woe.dfrm$trycut <- NA
+		woe.dfrm$cuttemp <- NA
+		woe.dfrm$cut <- "a"
+		woe.dfrm$cut[2] <- "b"
+		if ( nrow(woe.dfrm)>2 ) { woe.dfrm$cut[3] <- "c" }
+		woe.dfrm <- woe.dfrm[,c(1:6,9:11,7,8)]
+	}
 
-	## Save final binning solution via look-up-table for deployment
-	levels(df[,pred.var]) <- c(levels(df[,pred.var]), "Missing")   # add factor level 'Missing'
-	df[,pred.var][is.na(df[,pred.var])] <- "Missing"   # replace NA with string 'Missing'
-	look.up.table <- aggregate(df[,ncol(df)], list(df[,pred.var], df[,ncol(df)-1]), mean, na.rm=TRUE)
-	look.up.table <- cbind.data.frame(look.up.table, iv.total.final)   # add column with final total Information Value
-	colnames(look.up.table)[3] <- "woe"
-	look.up.table <- merge(look.up.table, woe.dfrm.final[ , -which(names(woe.dfrm.final) %in% c("woe"))], by.x=2, by.y=0)
+	# Restore original factor level names and original counts via outer join (because they may have be lost by former aggregating to misc. levels)
+	woe.dfrm.sparse.subset$misc[woe.dfrm.sparse.subset$sparse.merge==1] <- "misc. level pos."
+	woe.dfrm.sparse.subset$misc[woe.dfrm.sparse.subset$sparse.merge==-1] <- "misc. level neg."
+	woe.dfrm.sparse.subset$original.names <- row.names(woe.dfrm.sparse.subset)		
+	# Rename variables with aggregated count vor misc. bins to avoid name conflicts in merging
+	colnames(woe.dfrm)[1] <- paste(colnames(woe.dfrm)[1], "aggr", sep=".")
+	colnames(woe.dfrm)[2] <- paste(colnames(woe.dfrm)[2], "aggr", sep=".")
+	# Merge
+	woe.dfrm <- merge( woe.dfrm.sparse.subset[,c(6:7,1:2)], woe.dfrm, by.x=1, by.y=10, all=TRUE)
+	# Restore original factor level names
+	woe.dfrm$Group.1 <- woe.dfrm$misc
+	woe.dfrm$Group.1[!is.na(woe.dfrm$original.names)] <- woe.dfrm$original.names[!is.na(woe.dfrm$original.names)]
+	# Restore original counts
+	woe.dfrm[,3][is.na(woe.dfrm[,3])] <- woe.dfrm[,5][is.na(woe.dfrm[,3])]
+	woe.dfrm[,4][is.na(woe.dfrm[,4])] <- woe.dfrm[,6][is.na(woe.dfrm[,4])]
+	# Remove unnecessary count variables
+	woe.dfrm <- woe.dfrm[, -c(5,6)]
+
+	# Realize final bin aggregation resulting from the tree-like procedure above
+	# and compute corresponding WOE and IV values
+	woe.dfrm.aggr <- aggregate(woe.dfrm[,3:4], by=list(woe.dfrm$cut), 'sum')
+	colnames(woe.dfrm.aggr)[1] <- 'cut'
+	woe.dfrm.aggr$col.perc.a <- woe.dfrm.aggr[,2]/sum(woe.dfrm.aggr[,2])
+	woe.dfrm.aggr$col.perc.b <- woe.dfrm.aggr[,3]/sum(woe.dfrm.aggr[,3])
+
+	# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
+	if ( !anyNA(df[,2]) ) {
+		if ( min(woe.dfrm.aggr[-nrow(woe.dfrm.aggr),2],na.rm=TRUE)==0 | min(woe.dfrm.aggr[-nrow(woe.dfrm.aggr),3],na.rm=TRUE)==0 ) {
+			woe.dfrm.aggr$col.perc.a[-nrow(woe.dfrm.aggr)] <- (woe.dfrm.aggr$col.perc.a[-nrow(woe.dfrm.aggr)]+0.0001)/sum(woe.dfrm.aggr$col.perc.a[-nrow(woe.dfrm.aggr)]+0.0001)
+			woe.dfrm.aggr$col.perc.b[-nrow(woe.dfrm.aggr)] <- (woe.dfrm.aggr$col.perc.b[-nrow(woe.dfrm.aggr)]+0.0001)/sum(woe.dfrm.aggr$col.perc.b[-nrow(woe.dfrm.aggr)]+0.0001)	
+		}
+	} else {
+		if ( min(woe.dfrm.aggr[,2],na.rm=TRUE)==0 | min(woe.dfrm.aggr[,3],na.rm=TRUE)==0 ) {
+			woe.dfrm.aggr$col.perc.a <- (woe.dfrm.aggr$col.perc.a+0.0001)/sum(woe.dfrm.aggr$col.perc.a+0.0001)
+			woe.dfrm.aggr$col.perc.b <- (woe.dfrm.aggr$col.perc.b+0.0001)/sum(woe.dfrm.aggr$col.perc.b+0.0001)	
+		}
+	}
+	woe.dfrm.aggr$woe <- 100*log(woe.dfrm.aggr$col.perc.a/woe.dfrm.aggr$col.perc.b)
+	woe.dfrm.aggr$woe[is.finite(woe.dfrm.aggr$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+	woe.dfrm.aggr <- woe.dfrm.aggr[order(woe.dfrm.aggr$woe),]   # sort data via WOE values
+	woe.dfrm.aggr$iv.bins <- (woe.dfrm.aggr$col.perc.a-woe.dfrm.aggr$col.perc.b)*woe.dfrm.aggr$woe/100
+	woe.dfrm.aggr$iv.total.final <- sum(woe.dfrm.aggr$iv.bins, na.rm=TRUE)
+
+	# Merge the table with the final WOE and IV values with the table containing the original and aggregated bin names
+	look.up.table <- merge(woe.dfrm.aggr, woe.dfrm[11:13], by.x=1, by.y=1)
+	look.up.table <- look.up.table[,c(9,10,6,8,2:5,7)]
 	look.up.table <- look.up.table[order(look.up.table$woe, look.up.table$Group.2),]   # sort by woe value and merged bin name
 
+	# Convert variables with original and aggregated factor levels into factors
+	look.up.table$Group.1 <- factor(look.up.table$Group.1)
+	look.up.table$Group.2 <- factor(look.up.table$Group.2)
+	
 	# In case the misc. level consists only of only NA rename it 'Missing'
 	if ( length(which(look.up.table[,2]=='Missing'))==1 && (length(which(look.up.table[,1]=="misc. level neg."))==1 || length(which(look.up.table[,1]=="misc. level pos."))==1) ) {
 		if ( (which(look.up.table[,2]=='Missing') == which(look.up.table[,1]=='misc. level neg.')) || (which(look.up.table[,2]=='Missing') == which(look.up.table[,1]=='misc. level pos.')) ) {
@@ -439,7 +433,6 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 		look.up.table$Group.2 <- as.factor(gsub("[*+*]", " ", look.up.table$Group.2))   # remove + signs
 		look.up.table$Group.2 <- as.factor(gsub("  +", " ", look.up.table$Group.2))   # remove double blanks
 	}
-
 
 }
 
@@ -467,36 +460,37 @@ else {
 
 
 
-#' @title Binning via Fine and Coarse Classing
+#' @title Binning via Tree-Like Segmentation
 #'
 #' @description
-#' \code{woe.binning} generates a supervised fine and coarse classing of numeric
-#' variables and factors with respect to a dichotomous target variable. Its parameters
-#' provide flexibility in finding a binning that fits specific data characteristics
-#' and practical needs.
+#' \code{woe.tree.binning} generates a supervised tree-like segmentation of numeric variables
+#' and factors with respect to a dichotomous target variable. Its parameters provide
+#' flexibility in finding a binning that fits specific data characteristics and practical
+#' needs.
 #'
 #' @section Binning of Numeric Variables:
-#' Numeric variables (continuous and ordinal) are binned by merging initial classes with
+#' Numeric variables (continuous and ordinal) are binned beginning with initial classes with
 #' similar frequencies. The number of initial bins results from the \emph{min.perc.total}
 #' parameter: min.perc.total will result in trunc(1/min.perc.total) initial bins,
 #' whereby \emph{trunc} is needed to guarantee bins with similar frequencies.
 #' For example \emph{min.perc.total=0.07} will cause trunc(14.3)=14 initial classes.
 #' Next, if \emph{min.perc.class}>0, bins with sparse target classes will be merged with
 #' the next upper bin, and in case of the last bin with the next lower one. NAs have
-#' their own bin and will not be merged with others. Finally nearby bins with most similar
-#' weight of evidence (WOE) values are joined step by step until the information value
-#' (IV) decreases more than specified by a percentage value (\emph{stop.limit} parameter)
-#' or until two bins are reached.
+#' their own bin and will not be merged with others. Finally the actual tree-like procedure
+#' starts: binary splits iteratively assign nearby classes with similar weight of evidence
+#' (WOE) values to segments in a way that maximizes the resulting information value (IV).
+#' The procedure stops when the IV increases less then specified by a percentage value
+#' (\emph{stop.limit} parameter).
 #' @section Binning of Factors:
-#' Factors (categorical variables) are binned by merging factor levels. As a start sparse
-#' levels (defined via the \emph{min.perc.total} and \emph{min.perc.class} parameters)
-#' are merged to a \sQuote{miscellaneous} level: if possible, respective levels (including
-#' sparse NAs) are bundled as \sQuote{misc. level pos.} (associated with positive WOE
-#' values), respectively as \sQuote{misc. level neg.} (associated with negative WOE
-#' values). In case a misc. level contains only NAs it will be named \sQuote{Missing}.
-#' Afterwards levels with similar WOE values are joined step by step until the information
-#' value (IV) decreases more than specified by a percentage value (\emph{stop.limit} parameter)
-#' or until two bins are reached.
+#' Factors (categorical variables) are binned via factor levels. As a start sparse levels
+#' (defined via the \emph{min.perc.total} and \emph{min.perc.class} parameters) are merged
+#' to a \sQuote{miscellaneous} level: if possible, respective levels (including sparse NAs)
+#' are bundled as \sQuote{misc. level pos.} (associated with positive WOE values), respectively
+#' as \sQuote{misc. level neg.} (associated with negative WOE values). In case a misc. level
+#' contains only NAs it will be named \sQuote{Missing}. Afterwards the actual tree-like
+#' procedure starts: binary splits iteratively assign levels with similar WOE values to
+#' segments in a way that maximizes the resulting information value (IV). The procedure stops
+#' when the IV increases less then specified by a percentage value (\emph{stop.limit} parameter).
 #' @section Adjustment of 0 Frequencies:
 #' In case the crosstab of the bins with the target classes contains frequencies = 0
 #' the column percentages are adjusted to be able to compute the WOE and IV values:
@@ -516,11 +510,11 @@ else {
 #' the corresponding WOE values will be NA then, as well.
 #'
 #' @usage
-#' woe.binning(df, target.var, pred.var, min.perc.total,
-#'             min.perc.class, stop.limit, abbrev.fact.levels, event.class)
+#' woe.tree.binning(df, target.var, pred.var, min.perc.total,
+#'                 min.perc.class, stop.limit, abbrev.fact.levels, event.class)
 #'
 #' @return
-#' \code{woe.binning} generates an object containing the information necessary
+#' \code{woe.tree.binning} generates an object with the information necessary
 #' for studying and applying the realized binning solution. When saved
 #' it can be used with the functions \code{\link{woe.binning.plot}}, \code{\link{woe.binning.table}}
 #' and \code{\link{woe.binning.deploy}}.
@@ -540,12 +534,13 @@ else {
 #' Numeric variables and factors are supported and may contain NAs.
 #' @param min.perc.total
 #' For numeric variables this parameter defines the number of initial
-#' classes before any merging is applied. For example \emph{min.perc.total=0.05}
-#' (5\%) will result in 20 initial classes. For factors the original
-#' levels with a percentage below this limit are collected in a \sQuote{miscellaneous}
-#' level before the merging based on the \emph{min.perc.class} and on the
-#' WOE starts. Increasing the \emph{min.perc.total} parameter will avoid
-#' sparse bins. Accepted range: 0.01-0.2; default: 0.05.
+#' classes before any merging or tree-like splitting is applied. For example
+#' \emph{min.perc.total=0.05} (5\%) will result in 20 initial classes. For factors
+#' the original levels with a percentage below this limit are collected in a
+#' \sQuote{miscellaneous} level before the merging based on the \emph{min.perc.class}
+#' and the tree-like splitting based on the WOE values starts. Increasing the
+#' \emph{min.perc.total} parameter will avoid sparse bins. Accepted range: 0.01-0.2;
+#' default: 0.01.
 #' @param min.perc.class
 #' If a column percentage of one of the target classes within a bin is
 #' below this limit (e.g. below 0.01=1\%) then the respective bin will be
@@ -556,11 +551,11 @@ else {
 #' default: 0, i.e. no merging with respect to sparse target classes
 #' is applied.
 #' @param stop.limit
-#' Stops WOE based merging of the predictor's classes/levels in case the
-#' resulting information value (IV) decreases more than \emph{x}\% (e.g. 0.05 = 5\%)
-#' compared to the preceding binning step. \emph{stop.limit=0} will skip any
-#' WOE based merging. Increasing the \emph{stop.limit} will simplify the binning
-#' solution and may avoid overfitting. Accepted range: 0-0.5; default: 0.1.
+#' Stops WOE based segmentation of the predictor's classes/levels in case the
+#' resulting information value (IV) increases less than \emph{x}\% (e.g. 0.05 = 5\%)
+#' compared to the preceding binning step. Increasing the \emph{stop.limit} will
+#' simplify the binning solution and may avoid overfitting. Accepted range: 0-0.5;
+#' default: 0.1.
 #' @param abbrev.fact.levels
 #' Abbreviates the names of new (merged) factor levels via the base R
 #' \code{\link{abbreviate}} function in case the specified number of
@@ -585,22 +580,22 @@ else {
 #'                   'savings.account.and.bonds', 'purpose')]
 #'
 #' # Bin a single numeric variable
-#' binning <- woe.binning(df, 'creditability', 'duration.in.month',
-#'                        min.perc.total=0.05, min.perc.class=0.01,
-#'                        stop.limit=0.1, event.class='bad')
+#' binning <- woe.tree.binning(df, 'creditability', 'duration.in.month',
+#'                            min.perc.total=0.01, min.perc.class=0.01,
+#'                            stop.limit=0.1, event.class='bad')
 #'
 #' # Bin a single factor
-#' binning <- woe.binning(df, 'creditability', 'purpose',
-#'                        min.perc.total=0.05, min.perc.class=0, stop.limit=0.1,
-#'                        abbrev.fact.levels=50, event.class='bad')
+#' binning <- woe.tree.binning(df, 'creditability', 'purpose',
+#'                            min.perc.total=0.05, min.perc.class=0, stop.limit=0.1,
+#'                            abbrev.fact.levels=50, event.class='bad')
 #'
 #' # Bin two variables (one numeric and one factor)
 #' # with default parameter settings
-#' binning <- woe.binning(df, 'creditability', c('credit.amount','purpose'))
+#' binning <- woe.tree.binning(df, 'creditability', c('credit.amount','purpose'))
 #'
 #' # Bin all variables of the data frame (apart from the target variable)
 #' # with default parameter settings
-#' binning <- woe.binning(df, 'creditability', df)
+#' binning <- woe.tree.binning(df, 'creditability', df)
 #'
 #' @importFrom stats aggregate
 #' @importFrom stats embed
@@ -609,17 +604,17 @@ else {
 #'
 #' @export
 
-##### This function calls the actual binning function above for every specified predictor variable that needs to be binned. #####
+##### This function calls the actual tree-like binning function above for every specified predictor variable that needs to be binned. #####
 
-woe.binning <- function(df, target.var, pred.var, min.perc.total, min.perc.class, stop.limit, abbrev.fact.levels, event.class) {
+woe.tree.binning <- function(df, target.var, pred.var, min.perc.total, min.perc.class, stop.limit, abbrev.fact.levels, event.class) {
 
 
 	#### Warning message and defaults in case parameters are not specified
 	if ( missing(df)==TRUE || missing(target.var)==TRUE || missing(pred.var)==TRUE ) { warning("Incorrect specification of data frame and/or variables.") }	
-	if ( missing(min.perc.total)==TRUE ) { min.perc.total=0.05 }
+	if ( missing(min.perc.total)==TRUE ) { min.perc.total=0.01 }
 	if ( min.perc.total<0.01 || min.perc.total>0.2 || !is.numeric(min.perc.total) ) {
-		warning("Incorrect parameter specification; accepted min.perc.total parameter range is 0.01-0.2. Parameter was set to default (0.05).")
-		min.perc.total=0.05
+		warning("Incorrect parameter specification; accepted min.perc.total parameter range is 0.01-0.2. Parameter was set to default (0.01).")
+		min.perc.total=0.01
 	}
 	if ( missing(min.perc.class)==TRUE ) { min.perc.class=0 }
 	if ( min.perc.class<0 || min.perc.class>0.2 || !is.numeric(min.perc.class) ) {
@@ -676,7 +671,7 @@ woe.binning <- function(df, target.var, pred.var, min.perc.total, min.perc.class
 	df <- df[!is.na(df[,target.var]),]
 		
 	#### Call actual binning function and put binning solutions together with respective variable names into a list
-	binning <- lapply(pred.var, function(x) woe.binning.2(df, target.var, x, min.perc.total, min.perc.class, stop.limit, abbrev.fact.levels, bad, good))
+	binning <- lapply(pred.var, function(x) woe.tree.binning.2(df, target.var, x, min.perc.total, min.perc.class, stop.limit, abbrev.fact.levels, bad, good))
 
 	#### Read names and IV total values in the list and put them together with the binning tables
 	names.of.pred.var <- lapply(pred.var, function(x) x)

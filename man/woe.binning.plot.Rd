@@ -7,7 +7,7 @@
 woe.binning.plot(binning, multiple.plots, plot.range)
 }
 \arguments{
-\item{binning}{Binning information generated from the \code{\link{woe.binning}} function.
+\item{binning}{Binning information generated from the \code{woe.binning} or \code{woe.tree.binning} function.
 Contains names of the input predictor variables and the
 corresponding binning, WOE and IV information, which is used to
 generate the WOE and IV plots.}
@@ -23,7 +23,8 @@ highest IV values, \dQuote{11:20} for the next ten variables and so on.
 Just omit this parameter to visualize all binned variables (default).}
 }
 \description{
-\code{woe.binning.plot} visualizes the binning solution generated and saved via the \code{\link{woe.binning}} function.
+\code{woe.binning.plot} visualizes the binning solution generated and saved via the \code{\link{woe.binning}}
+or \code{\link{woe.tree.binning}} function.
 }
 \details{
 For each predictor variable \code{woe.binning.plot} generates a weight of evidence
@@ -50,9 +51,3 @@ woe.binning.plot(binning, plot.range='1:4')
 woe.binning.plot(binning, multiple.plots=FALSE)
 
 }
-\seealso{
-Other woe.binning.functions: \code{\link{woe.binning.deploy}},
-  \code{\link{woe.binning.table}},
-  \code{\link{woe.binning}}
-}
-

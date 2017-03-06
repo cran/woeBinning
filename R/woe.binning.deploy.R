@@ -76,25 +76,25 @@ woe.binning.deploy.2 <- function(df, pred.var, look.up.table, add.woe.or.dum.var
 #' @title Deployment of Binning
 #'
 #' @description
-#' \code{woe.binning.deploy} applies the binning solution generated and saved via the \code{\link{woe.binning}} function to (new) data.
+#' \code{woe.binning.deploy} applies the binning solution generated and saved via the \code{\link{woe.binning}}
+#' or \code{\link{woe.tree.binning}} function to (new) data.
 #'
-#' @details
-#' \code{woe.binning.deploy} applies the binning information generated from the \code{\link{woe.binning}}
-#' function to a data frame. In this data frame the names of the variables
+#' @section General Procedure:
+#' \code{woe.binning.deploy} applies the binning information that was generated from the \code{woe.binning}
+#' or \code{woe.tree.binning} function to a data frame. In this data frame the names of the variables
 #' to be binned need to be identical to the ones used with the \code{woe.binning}
-#' function. For each variable a binned version will be added. Optionally
-#' a variable with associated weight of evidence (WOE) values or corresponding
+#' or \code{woe.tree.binning} function. For each variable a binned version will be added.
+#' Optionally a variable with associated weight of evidence (WOE) values or corresponding
 #' dummy variables (one dummy variable for each final bin) are provided. 
 #' @section Handling of Missing Data:
-#' In case NAs already occurred when generating the binning solution
-#' via the \code{woe.binning} function the binning code 'Missing' is
-#' displayed and a corresponding WOE value can be computed.
+#' In case NAs already occurred during the \code{woe.binning} or \code{woe.tree.binning} binning process the code
+#' \sQuote{Missing} is displayed and a corresponding WOE value can be computed.
 #' In case NAs only occur in the deployment scenario \sQuote{Missing} is
 #' displayed for numeric variables and \sQuote{unknown} for factors; and
 #' the corresponding WOE values will be NAs then, as well.
 #' @section Handling of Unknown Factor Levels:
 #' For factor levels that have not been provided in generating the
-#' binning solution via the \code{woe.binning} function a new factor
+#' binning solution via the \code{woe.binning} or \code{woe.tree.binning} function a new factor
 #' level \sQuote{unknown} is displayed and the corresponding WOE value will be NA.
 #'
 #' @usage
@@ -104,9 +104,9 @@ woe.binning.deploy.2 <- function(df, pred.var, look.up.table, add.woe.or.dum.var
 #' Name of data frame with input data.
 #' The variable names and types (numerical or factor) need to be identical to
 #' the ones used for generating the binning solution with the
-#' \code{\link{woe.binning}} function.
+#' \code{woe.binning} or \code{woe.tree.binning} function.
 #' @param binning
-#' Binning information generated from the \code{\link{woe.binning}} function.
+#' Binning information generated from the \code{woe.binning} or \code{woe.tree.binning} function.
 #' Contains names of the input predictor variables and the
 #' corresponding binning, WOE and IV information, which is used to
 #' add a binned variable to a copy of the input data.
@@ -118,12 +118,10 @@ woe.binning.deploy.2 <- function(df, pred.var, look.up.table, add.woe.or.dum.var
 #' \emph{add.woe.or.dum.var=\dQuote{woe}} adds an additional variable with WOE scores
 #' and \emph{=\dQuote{dum}} additional dummy variables for each (aggregated) level
 #' of the binned variable. In case of dummy variables make sure that you have set
-#' an appropriate \emph{abbrev.fact.levels} parameter in the \code{\link{woe.binning}} function
+#' an appropriate \emph{abbrev.fact.levels} parameter in the \code{woe.binning} or \code{woe.tree.binning} function
 #' to avoid too long variable names. In principle, only alphanumeric characters
 #' and dots (.) will be used for variable names. Just omit this parameter in case you
 #' don't need additional variables.
-#' 
-#' @family woe binning functions
 #' 
 #' @examples
 #' # Load German credit data and create a subset

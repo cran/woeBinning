@@ -26,4 +26,3 @@ df <- germancredit[, c('creditability', 'credit.amount', 'duration.in.month',
 str(df)
 }
 \keyword{data}
-
