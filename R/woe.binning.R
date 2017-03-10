@@ -141,7 +141,6 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 		# Compute WOE and information value (IV) from crosstab frequencies
 		woe.dfrm$col.perc.a <- woe.dfrm[,1]/sum(woe.dfrm[,1])
 		woe.dfrm$col.perc.b <- woe.dfrm[,2]/sum(woe.dfrm[,2])
-		# Correct column percents in case of 0 frequencies (skip NA row)
 		# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
 		if ( !anyNA(df[,2]) ) {
 			if ( min(woe.dfrm[-nrow(woe.dfrm),1],na.rm=TRUE)==0 | min(woe.dfrm[-nrow(woe.dfrm),2],na.rm=TRUE)==0 ) {
@@ -249,17 +248,10 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 	# Compute WOE and information value (IV) from crosstab frequencies
 	woe.dfrm$col.perc.a <- woe.dfrm[,1]/sum(woe.dfrm[,1])
 	woe.dfrm$col.perc.b <- woe.dfrm[,2]/sum(woe.dfrm[,2])
-	# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
-	if ( !anyNA(df[,2]) ) {
-		if ( min(woe.dfrm[-nrow(woe.dfrm),1],na.rm=TRUE)==0 | min(woe.dfrm[-nrow(woe.dfrm),2],na.rm=TRUE)==0 ) {
-			woe.dfrm$col.perc.a[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)
-			woe.dfrm$col.perc.b[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)	
-		}
-	} else {
-		if ( min(woe.dfrm[,1],na.rm=TRUE)==0 | min(woe.dfrm[,2],na.rm=TRUE)==0 ) {
-			woe.dfrm$col.perc.a <- (woe.dfrm$col.perc.a+0.0001)/sum(woe.dfrm$col.perc.a+0.0001)
-			woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
-		}
+	# Correct column percents in case of 0 frequencies
+	if ( min(woe.dfrm[,1],na.rm=TRUE)==0 | min(woe.dfrm[,2],na.rm=TRUE)==0 ) {
+		woe.dfrm$col.perc.a <- (woe.dfrm$col.perc.a+0.0001)/sum(woe.dfrm$col.perc.a+0.0001)
+		woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
 	}
 
 	# Merge factor levels with frequencies < percentage limit specified above to "misc. level" (associated with pos. and neg. WOE values)
@@ -288,17 +280,10 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 		# Compute WOE and information value (IV) from crosstab frequencies
 		woe.dfrm$col.perc.a <- woe.dfrm[,1]/sum(woe.dfrm[,1])
 		woe.dfrm$col.perc.b <- woe.dfrm[,2]/sum(woe.dfrm[,2])
-		# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
-		if ( !anyNA(df[,2]) ) {
-			if ( min(woe.dfrm[-nrow(woe.dfrm),1],na.rm=TRUE)==0 | min(woe.dfrm[-nrow(woe.dfrm),2],na.rm=TRUE)==0 ) {
-				woe.dfrm$col.perc.a[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)
-				woe.dfrm$col.perc.b[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)	
-			}
-		} else {
-			if ( min(woe.dfrm[,1],na.rm=TRUE)==0 | min(woe.dfrm[,2],na.rm=TRUE)==0 ) {
-				woe.dfrm$col.perc.a <- (woe.dfrm$col.perc.a+0.0001)/sum(woe.dfrm$col.perc.a+0.0001)
-				woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
-			}
+		# Correct column percents in case of 0 frequencies
+		if ( min(woe.dfrm[,1],na.rm=TRUE)==0 | min(woe.dfrm[,2],na.rm=TRUE)==0 ) {
+			woe.dfrm$col.perc.a <- (woe.dfrm$col.perc.a+0.0001)/sum(woe.dfrm$col.perc.a+0.0001)
+			woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
 		}
 		woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
 		woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
@@ -328,11 +313,11 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 			
 			# Merge levels with most similar WOE values
 			min.woe.diff <- which(woe.dfrm$woe.diff==min(woe.dfrm$woe.diff, na.rm=TRUE))
-			levels(dfrm$predictor.var.binned)[levels(dfrm$predictor.var.binned)%in%c(row.names(woe.dfrm)[min.woe.diff],row.names(woe.dfrm)[min.woe.diff-1])] <- paste(row.names(woe.dfrm)[min.woe.diff], "+", row.names(woe.dfrm)[min.woe.diff-1])
+			levels(dfrm$predictor.var.binned)[levels(dfrm$predictor.var.binned)%in%c(row.names(woe.dfrm)[min.woe.diff][[1]][1],row.names(woe.dfrm)[min.woe.diff-1][[1]][1])] <- paste(row.names(woe.dfrm)[min.woe.diff][[1]][1], "+", row.names(woe.dfrm)[min.woe.diff-1][[1]][1])
 			
 			# Save names of the factor levels that are merged
-			list.level.a <- as.list(row.names(woe.dfrm)[min.woe.diff])
-			list.level.b <- as.list(row.names(woe.dfrm)[min.woe.diff-1])
+			list.level.a <- as.list(row.names(woe.dfrm)[min.woe.diff][[1]][1])
+			list.level.b <- as.list(row.names(woe.dfrm)[min.woe.diff-1][[1]][1])
 			
 			# Collect names of the factor levels that are merged in lists (until stop criteria is reached)
 			if ( exists('list.level.a.collected')==FALSE ) {
@@ -379,18 +364,11 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 	# Compute WOE and information value (IV) from crosstab frequencies
 	woe.dfrm.final$col.perc.a <- woe.dfrm.final[,1]/sum(woe.dfrm.final[,1])
 	woe.dfrm.final$col.perc.b <- woe.dfrm.final[,2]/sum(woe.dfrm.final[,2])
-	# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
-	if ( !anyNA(df[,2]) ) {
-		if ( min(woe.dfrm.final[-nrow(woe.dfrm.final),1],na.rm=TRUE)==0 | min(woe.dfrm.final[-nrow(woe.dfrm.final),2],na.rm=TRUE)==0 ) {
-			woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)] <- (woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)]+0.0001)/sum(woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)]+0.0001)
-			woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)] <- (woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)]+0.0001)/sum(woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)]+0.0001)	
-		}
-	} else {
-		if ( min(woe.dfrm.final[,1],na.rm=TRUE)==0 | min(woe.dfrm.final[,2],na.rm=TRUE)==0 ) {
-			woe.dfrm.final$col.perc.a <- (woe.dfrm.final$col.perc.a+0.0001)/sum(woe.dfrm.final$col.perc.a+0.0001)
-			woe.dfrm.final$col.perc.b <- (woe.dfrm.final$col.perc.b+0.0001)/sum(woe.dfrm.final$col.perc.b+0.0001)	
-		}
-	}
+	# Correct column percents in case of 0 frequencies
+	if ( min(woe.dfrm.final[,1],na.rm=TRUE)==0 | min(woe.dfrm.final[,2],na.rm=TRUE)==0 ) {
+		woe.dfrm.final$col.perc.a <- (woe.dfrm.final$col.perc.a+0.0001)/sum(woe.dfrm.final$col.perc.a+0.0001)
+		woe.dfrm.final$col.perc.b <- (woe.dfrm.final$col.perc.b+0.0001)/sum(woe.dfrm.final$col.perc.b+0.0001)	
+	}	
 	woe.dfrm.final$woe <- 100*log(woe.dfrm.final$col.perc.a/woe.dfrm.final$col.perc.b)
 	woe.dfrm.final$woe[is.finite(woe.dfrm.final$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
 	woe.dfrm.final <- woe.dfrm.final[order(woe.dfrm.final$woe),]   # sort data via WOE values
@@ -423,8 +401,14 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 	look.up.table <- look.up.table[order(look.up.table$woe, look.up.table$Group.2),]   # sort by woe value and merged bin name
 
 	# In case the misc. level consists only of only NA rename it 'Missing'
-	if ( length(which(look.up.table[,2]=='Missing'))==1 && (length(which(look.up.table[,1]=="misc. level neg."))==1 || length(which(look.up.table[,1]=="misc. level pos."))==1) ) {
-		if ( (which(look.up.table[,2]=='Missing') == which(look.up.table[,1]=='misc. level neg.')) || (which(look.up.table[,2]=='Missing') == which(look.up.table[,1]=='misc. level pos.')) ) {
+	if ( length(which(look.up.table[,2]=='Missing'))==1 && length(which(look.up.table[,1]=="misc. level neg."))==1 ) {
+		if ( (which(look.up.table[,2]=='Missing') == which(look.up.table[,1]=='misc. level neg.')) ) {
+			levels(look.up.table[,1]) <- c(levels(look.up.table[,2]), 'Missing')   # add factor level 'Missing'
+			look.up.table[,1][look.up.table[,2]=='Missing'] <- 'Missing'
+		}
+	}
+	if ( length(which(look.up.table[,2]=='Missing'))==1 && length(which(look.up.table[,1]=="misc. level pos."))==1 ) {
+		if ( (which(look.up.table[,2]=='Missing') == which(look.up.table[,1]=='misc. level pos.')) ) {
 			levels(look.up.table[,1]) <- c(levels(look.up.table[,2]), 'Missing')   # add factor level 'Missing'
 			look.up.table[,1][look.up.table[,2]=='Missing'] <- 'Missing'
 		}

@@ -101,10 +101,9 @@ woe.binning.deploy.2 <- function(df, pred.var, look.up.table, add.woe.or.dum.var
 #' woe.binning.deploy(df, binning, min.iv.total, add.woe.or.dum.var)
 #'
 #' @param df
-#' Name of data frame with input data.
-#' The variable names and types (numerical or factor) need to be identical to
-#' the ones used for generating the binning solution with the
-#' \code{woe.binning} or \code{woe.tree.binning} function.
+#' Name of the data frame the binning solution - that was generated via the function \code{woe.binning}
+#' or \code{woe.tree.binning} - should be applied to. The variable names and types (numerical or factor)
+#' need to be identical to the ones used during the generation of the binning solution.
 #' @param binning
 #' Binning information generated from the \code{woe.binning} or \code{woe.tree.binning} function.
 #' Contains names of the input predictor variables and the
