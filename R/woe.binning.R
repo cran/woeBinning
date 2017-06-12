@@ -154,7 +154,7 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 			}
 		}
 		woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
-		woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+		woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- NA   # convert Inf, -Inf and NaN to NA
 		woe.dfrm$woe.lag <- c(NA, embed(woe.dfrm$woe,2)[,2])
 		woe.dfrm$woe.diff <- abs(woe.dfrm$woe-woe.dfrm$woe.lag)
 		woe.dfrm$iv.bins <- (woe.dfrm$col.perc.a-woe.dfrm$col.perc.b)*woe.dfrm$woe/100
@@ -163,14 +163,14 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 		iv.total <- sum(woe.dfrm$iv.bins, na.rm=TRUE)
 
 		# Collect total IVs for different binning solutions
-		ifelse (exists('iv.total.collect'), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
+		ifelse (exists('iv.total.collect', inherits=FALSE), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
 		
 		# In case IV decreases by more than percentage specified by stop.limit parameter above
 		# restore former binning solution (cutpoints) and leave loop
 		if ( length(iv.total.collect)>1 ) {
 			actual.iv.decrease <- ((iv.total.collect[length(iv.total.collect)-1]-iv.total.collect[length(iv.total.collect)])/(iv.total.collect[length(iv.total.collect)-1]))
 
-			if ( (actual.iv.decrease>stop.limit) && (exists('stop.limit.exceeded')==FALSE) ) {
+			if ( (actual.iv.decrease>stop.limit) && (exists('stop.limit.exceeded', inherits=FALSE)==FALSE) ) {
 				cutpoints.final <- cutpoints.backup
 				woe.dfrm.final <- woe.dfrm.backup
 				stop.limit.exceeded <- TRUE   # indicates that stop limit is exceeded to prevent overriding the final solution
@@ -178,13 +178,13 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 		}
 		
 		# Save first cutpoint solution and corresponding WOE values as final solution (is used in case no WOE merging will be applied)
-		if ( exists('cutpoints.backup')==FALSE ) {
+		if ( exists('cutpoints.backup', inherits=FALSE)==FALSE ) {
 			cutpoints.final <- cutpoints
 			woe.dfrm.final <- woe.dfrm
 		}
 
 		# Saves binning solution after last merging step in case the IV stop limit was not exceeded
-		if ( (exists('stop.limit.exceeded')==FALSE) && (length(cutpoints)==3) ) {
+		if ( (exists('stop.limit.exceeded', inherits=FALSE)==FALSE) && (length(cutpoints)==3) ) {
 			cutpoints.final <- cutpoints
 			woe.dfrm.final <- woe.dfrm
 		}
@@ -208,7 +208,7 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 	lower.cutpoints.final.dfrm <- as.data.frame(cutpoints.final)
 	upper.cutpoints.final.dfrm <- rbind(as.data.frame(cutpoints.final[-1]),'Missing')
 	look.up.table <- cbind(woe.dfrm.final[, 5,drop=FALSE], lower.cutpoints.final.dfrm, upper.cutpoints.final.dfrm)
-	if ( look.up.table[nrow(look.up.table),1]==0 ) { look.up.table[nrow(look.up.table),1] <- NA }   # replace WOE=0 in Missing row with NA (because this only occurs in case Missing Data does not occur during binning)
+#	if ( look.up.table[nrow(look.up.table),1]==0 ) { look.up.table[nrow(look.up.table),1] <- NA }   # replace WOE=0 in Missing row with NA (because this only occurs in case Missing Data does not occur during binning)
 	look.up.table <- cbind.data.frame(look.up.table, iv.total.final, woe.dfrm.final[, c(1,2,3,4,8),drop=FALSE])   # add column with final total Information Value
 
 
@@ -286,7 +286,7 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 			woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
 		}
 		woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
-		woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+		woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- NA   # convert Inf, -Inf and NaN to NA
 		woe.dfrm <- woe.dfrm[order(woe.dfrm$woe),]   # sort data via WOE values
 		woe.dfrm$woe.lag <- c(NA, embed(woe.dfrm$woe,2)[,2])
 		woe.dfrm$woe.diff <- abs(woe.dfrm$woe-woe.dfrm$woe.lag)
@@ -296,13 +296,13 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 		iv.total <- sum(woe.dfrm$iv.bins, na.rm=TRUE)
 		
 		# Collect total IVs for different binning solutions
-		ifelse (exists('iv.total.collect'), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
+		ifelse (exists('iv.total.collect', inherits=FALSE), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
 		
 		# In case IV decreases by more than percentage specified by stop.limit parameter above
 		# restore former binning solution (cutpoints) and leave loop
 		if ( length(iv.total.collect)>1 ) {
 			actual.iv.decrease <- ((iv.total.collect[length(iv.total.collect)-1]-iv.total.collect[length(iv.total.collect)])/(iv.total.collect[length(iv.total.collect)-1]))
-			if ( (actual.iv.decrease>stop.limit) && (exists('stop.limit.exceeded')==FALSE) ) {
+			if ( (actual.iv.decrease>stop.limit) && (exists('stop.limit.exceeded', inherits=FALSE)==FALSE) ) {
 				stop.limit.exceeded <- TRUE   # indicates that stop limit is exceeded to prevent overriding the final solution
 			}
 		}
@@ -320,12 +320,12 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 			list.level.b <- as.list(row.names(woe.dfrm)[min.woe.diff-1][[1]][1])
 			
 			# Collect names of the factor levels that are merged in lists (until stop criteria is reached)
-			if ( exists('list.level.a.collected')==FALSE ) {
+			if ( exists('list.level.a.collected', inherits=FALSE)==FALSE ) {
 				list.level.a.collected <- list.level.a
 				list.level.b.collected <- list.level.b
 			}
 			else {
-				if ( exists('stop.limit.exceeded')==FALSE ) {
+				if ( exists('stop.limit.exceeded', inherits=FALSE)==FALSE ) {
 					list.level.a.collected <- c(list.level.a.collected, list.level.a)
 					list.level.b.collected <- c(list.level.b.collected, list.level.b)
 				}
@@ -347,7 +347,7 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 	levels(df[,ncol(df)])[levels(df[,ncol(df)])%in%(row.names(woe.dfrm.sparse.subset.pos))] <- "misc. level pos."
 	levels(df[,ncol(df)])[levels(df[,ncol(df)])%in%(row.names(woe.dfrm.sparse.subset.neg))] <- "misc. level neg."
 	# Merge levels with similar WOE values
-	if ( exists('list.level.a.collected')==TRUE ) {
+	if ( exists('list.level.a.collected', inherits=FALSE)==TRUE ) {
 		for ( i in 1:length(list.level.a.collected) ) {
 			levels(df[,ncol(df)])[levels(df[,ncol(df)])%in%c(list.level.a.collected[i],list.level.b.collected[i])] <- paste(list.level.a.collected[i], "+", list.level.b.collected[i])
 		}
@@ -370,7 +370,7 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 		woe.dfrm.final$col.perc.b <- (woe.dfrm.final$col.perc.b+0.0001)/sum(woe.dfrm.final$col.perc.b+0.0001)	
 	}	
 	woe.dfrm.final$woe <- 100*log(woe.dfrm.final$col.perc.a/woe.dfrm.final$col.perc.b)
-	woe.dfrm.final$woe[is.finite(woe.dfrm.final$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+	woe.dfrm.final$woe[is.finite(woe.dfrm.final$woe)==FALSE] <- NA   # convert Inf, -Inf and NaN to NA
 	woe.dfrm.final <- woe.dfrm.final[order(woe.dfrm.final$woe),]   # sort data via WOE values
 	woe.dfrm.final$iv.bins <- (woe.dfrm.final$col.perc.a-woe.dfrm.final$col.perc.b)*woe.dfrm.final$woe/100	
 	iv.total.final <- sum(woe.dfrm.final$iv.bins, na.rm=TRUE)

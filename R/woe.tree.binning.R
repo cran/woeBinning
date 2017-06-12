@@ -133,7 +133,7 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 
 			for (i in 1:length(innercutpoints)) {
 			
-				if ( exists('selected.cuts') ) {
+				if ( exists('selected.cuts', inherits=FALSE) ) {
 					pred.var.cut <- cut(dfrm$predictor.var, c(-Inf, selected.cuts, innercutpoints[i], Inf), labels=NULL, include.lowest=FALSE, right=TRUE, dig.lab=10, ordered_result=TRUE)
 				} else {
 					pred.var.cut <- cut(dfrm$predictor.var, c(-Inf, innercutpoints[i], Inf), labels=NULL, include.lowest=FALSE, right=TRUE, dig.lab=10, ordered_result=TRUE)
@@ -145,16 +145,28 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 				woe.dfrm <- woe.dfrm[, c(good, bad)]   # Select columns with raw frequencies only
 				woe.dfrm$col.perc.a <- woe.dfrm[,1]/sum(woe.dfrm[,1])
 				woe.dfrm$col.perc.b <- woe.dfrm[,2]/sum(woe.dfrm[,2])
+				# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
+				if ( !anyNA(df[,2]) ) {
+					if ( min(woe.dfrm[-nrow(woe.dfrm),1],na.rm=TRUE)==0 | min(woe.dfrm[-nrow(woe.dfrm),2],na.rm=TRUE)==0 ) {
+						woe.dfrm$col.perc.a[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.a[-nrow(woe.dfrm)]+0.0001)
+						woe.dfrm$col.perc.b[-nrow(woe.dfrm)] <- (woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)/sum(woe.dfrm$col.perc.b[-nrow(woe.dfrm)]+0.0001)	
+					}
+				} else {
+					if ( min(woe.dfrm[,1],na.rm=TRUE)==0 | min(woe.dfrm[,2],na.rm=TRUE)==0 ) {
+						woe.dfrm$col.perc.a <- (woe.dfrm$col.perc.a+0.0001)/sum(woe.dfrm$col.perc.a+0.0001)
+						woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
+					}
+				}
 				woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
-				woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+				woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- NA   # convert Inf, -Inf and NaN to NA
 				woe.dfrm$iv.bins <- (woe.dfrm$col.perc.a-woe.dfrm$col.perc.b)*woe.dfrm$woe/100
 				iv.total <- sum(woe.dfrm$iv.bins, na.rm=TRUE)
-				ifelse (exists('iv.total.collect'), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
+				ifelse (exists('iv.total.collect', inherits=FALSE), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
 				
 			}
 
 			# Restore former solution in case stop criteria is reached and exit loop
-			if ( exists('max.iv.total.collect.backup') ) {
+			if ( exists('max.iv.total.collect.backup', inherits=FALSE) ) {
 				if ( (max.iv.total.collect.backup+max.iv.total.collect.backup*stop.limit)>max(iv.total.collect) ) {
 					innercutpoints <- innercutpoints.backup
 					break
@@ -170,7 +182,7 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 			iv.total.collect <- NULL
 
 			# collect and sort selected cuts
-			ifelse (exists('selected.cuts'), selected.cuts <- cbind(selected.cuts, innercutpoints[index.optimal.cut[sort.list(index.optimal.cut)]]), selected.cuts <- innercutpoints[index.optimal.cut[sort.list(index.optimal.cut)]])
+			ifelse (exists('selected.cuts', inherits=FALSE), selected.cuts <- cbind(selected.cuts, innercutpoints[index.optimal.cut[sort.list(index.optimal.cut)]]), selected.cuts <- innercutpoints[index.optimal.cut[sort.list(index.optimal.cut)]])
 			selected.cuts <- sort(selected.cuts)
 			selected.cuts <- unique(selected.cuts)
 
@@ -187,11 +199,23 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 			woe.dfrm.final <- woe.dfrm.final[, 1:2]   # Select columns with raw frequencies only
 			woe.dfrm.final$col.perc.a <- woe.dfrm.final[,1]/sum(woe.dfrm.final[,1])
 			woe.dfrm.final$col.perc.b <- woe.dfrm.final[,2]/sum(woe.dfrm.final[,2])
+			# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
+			if ( !anyNA(df[,2]) ) {
+				if ( min(woe.dfrm.final[-nrow(woe.dfrm.final),1],na.rm=TRUE)==0 | min(woe.dfrm.final[-nrow(woe.dfrm.final),2],na.rm=TRUE)==0 ) {
+					woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)] <- (woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)]+0.0001)/sum(woe.dfrm.final$col.perc.a[-nrow(woe.dfrm.final)]+0.0001)
+					woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)] <- (woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)]+0.0001)/sum(woe.dfrm.final$col.perc.b[-nrow(woe.dfrm.final)]+0.0001)	
+				}
+			} else {
+				if ( min(woe.dfrm.final[,1],na.rm=TRUE)==0 | min(woe.dfrm.final[,2],na.rm=TRUE)==0 ) {
+					woe.dfrm.final$col.perc.a <- (woe.dfrm.final$col.perc.a+0.0001)/sum(woe.dfrm.final$col.perc.a+0.0001)
+					woe.dfrm.final$col.perc.b <- (woe.dfrm.final$col.perc.b+0.0001)/sum(woe.dfrm.final$col.perc.b+0.0001)	
+				}
+			}
 		
 	}
 
 	woe.dfrm.final$woe <- 100*log(woe.dfrm.final$col.perc.a/woe.dfrm.final$col.perc.b)
-	woe.dfrm.final$woe[is.finite(woe.dfrm.final$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+	woe.dfrm.final$woe[is.finite(woe.dfrm.final$woe)==FALSE] <- NA   # convert Inf, -Inf and NaN to NA
 	woe.dfrm.final$iv.bins <- (woe.dfrm.final$col.perc.a-woe.dfrm.final$col.perc.b)*woe.dfrm.final$woe/100
 	# Add cutpoints needed for deployment
 	cutpoints.final <- c(-Inf, selected.cuts, Inf)
@@ -203,7 +227,6 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 	woe.dfrm.final$iv.total.final <- iv.total.final
 	## Save final binning solution via look-up-table for deployment
 	look.up.table <- woe.dfrm.final[,c(5,7:9,1:4,6)]
-	if ( look.up.table[nrow(look.up.table),1]==0 ) { look.up.table[nrow(look.up.table),1] <- NA }   # replace WOE=0 in Missing row with NA (because this only occurs in case Missing Data does not occur during binning)
 
 }
 
@@ -274,7 +297,7 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 		woe.dfrm$col.perc.b <- (woe.dfrm$col.perc.b+0.0001)/sum(woe.dfrm$col.perc.b+0.0001)	
 	}
 	woe.dfrm$woe <- 100*log(woe.dfrm$col.perc.a/woe.dfrm$col.perc.b)
-	woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+	woe.dfrm$woe[is.finite(woe.dfrm$woe)==FALSE] <- NA   # convert Inf, -Inf and NaN to NA
 	woe.dfrm <- woe.dfrm[order(woe.dfrm$woe),]   # sort data via WOE values
 	woe.dfrm$iv.bins <- (woe.dfrm$col.perc.a-woe.dfrm$col.perc.b)*woe.dfrm$woe/100
 
@@ -293,16 +316,16 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 					woe.dfrm.try <- aggregate(woe.dfrm[,3:4], by=list(woe.dfrm$trycut, woe.dfrm$cut), 'sum')
 				}
 				woe.dfrm.try$woe <- 100*log(woe.dfrm.try$col.perc.a/woe.dfrm.try$col.perc.b)
-				woe.dfrm.try$woe[is.finite(woe.dfrm.try$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+				woe.dfrm.try$woe[is.finite(woe.dfrm.try$woe)==FALSE] <- NA   # convert Inf, -Inf and NaN to NA
 				woe.dfrm.try$iv.bins <- (woe.dfrm.try$col.perc.a-woe.dfrm.try$col.perc.b)*woe.dfrm.try$woe/100
 				iv.total <- sum(woe.dfrm.try$iv.bins, na.rm=TRUE)
-				ifelse (exists('iv.total.collect'), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
+				ifelse (exists('iv.total.collect', inherits=FALSE), iv.total.collect <- cbind(iv.total.collect, iv.total), iv.total.collect <- iv.total)
 			}
 			
 			index.optimal.cut <- which(iv.total.collect==max(iv.total.collect))[1]
 	
 			# Restore former solution in case stop criteria is reached and exit loop
-			if ( exists('max.iv.total.collect.backup') ) {
+			if ( exists('max.iv.total.collect.backup', inherits=FALSE) ) {
 				if ( (max.iv.total.collect.backup+max.iv.total.collect.backup*stop.limit)>max(iv.total.collect) ) {
 					break
 				}
@@ -381,7 +404,7 @@ if ( length(unique(dfrm[,1]))==2 && is.factor(dfrm[,2]) ) {
 		woe.dfrm.aggr$col.perc.b <- (woe.dfrm.aggr$col.perc.b+0.0001)/sum(woe.dfrm.aggr$col.perc.b+0.0001)	
 	}	
 	woe.dfrm.aggr$woe <- 100*log(woe.dfrm.aggr$col.perc.a/woe.dfrm.aggr$col.perc.b)
-	woe.dfrm.aggr$woe[is.finite(woe.dfrm.aggr$woe)==FALSE] <- 0   # convert Inf, -Inf and NaN to 0
+	woe.dfrm.aggr$woe[is.finite(woe.dfrm.aggr$woe)==FALSE] <- NA   # convert Inf, -Inf and NaN to NA
 	woe.dfrm.aggr <- woe.dfrm.aggr[order(woe.dfrm.aggr$woe),]   # sort data via WOE values
 	woe.dfrm.aggr$iv.bins <- (woe.dfrm.aggr$col.perc.a-woe.dfrm.aggr$col.perc.b)*woe.dfrm.aggr$woe/100
 	woe.dfrm.aggr$iv.total.final <- sum(woe.dfrm.aggr$iv.bins, na.rm=TRUE)
