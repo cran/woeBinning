@@ -196,7 +196,7 @@ if ( length(unique(dfrm[,1]))==2 && is.numeric(dfrm[,2]) ) {
 			freq.table <- table(pred.var.cut, dfrm$target.var, useNA="always")
 			row.names(freq.table)[is.na(row.names(freq.table))] <- 'Missing'   # Replace NA in row.names with string 'Missing'
 			woe.dfrm.final <- as.data.frame.matrix(freq.table)   # Convert frequency table to data frame
-			woe.dfrm.final <- woe.dfrm.final[, 1:2]   # Select columns with raw frequencies only
+			woe.dfrm.final <- woe.dfrm.final[, c(good, bad)]   # Select columns with raw frequencies only			
 			woe.dfrm.final$col.perc.a <- woe.dfrm.final[,1]/sum(woe.dfrm.final[,1])
 			woe.dfrm.final$col.perc.b <- woe.dfrm.final[,2]/sum(woe.dfrm.final[,2])
 			# Correct column percents in case of 0 frequencies (in case of no NA skip last row)
