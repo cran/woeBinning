@@ -27,7 +27,7 @@ classes before any merging is applied. For example \emph{min.perc.total=0.05}
 levels with a percentage below this limit are collected in a \sQuote{miscellaneous}
 level before the merging based on the \emph{min.perc.class} and on the
 WOE starts. Increasing the \emph{min.perc.total} parameter will avoid
-sparse bins. Accepted range: 0.01-0.2; default: 0.05.}
+sparse bins. Accepted range: 0.0001-0.2; default: 0.05.}
 
 \item{min.perc.class}{If a column percentage of one of the target classes within a bin is
 below this limit (e.g. below 0.01=1\%) then the respective bin will be

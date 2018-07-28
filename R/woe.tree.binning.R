@@ -547,7 +547,7 @@ else {
 #' the original levels with a percentage below this limit are collected in a
 #' \sQuote{miscellaneous} level before the merging based on the \emph{min.perc.class}
 #' and the tree-like splitting based on the WOE values starts. Increasing the
-#' \emph{min.perc.total} parameter will avoid sparse bins. Accepted range: 0.01-0.2;
+#' \emph{min.perc.total} parameter will avoid sparse bins. Accepted range: 0.0001-0.2;
 #' default: 0.01.
 #' @param min.perc.class
 #' If a column percentage of one of the target classes within a bin is
@@ -620,8 +620,8 @@ woe.tree.binning <- function(df, target.var, pred.var, min.perc.total, min.perc.
 	#### Warning message and defaults in case parameters are not specified
 	if ( missing(df)==TRUE || missing(target.var)==TRUE || missing(pred.var)==TRUE ) { warning("Incorrect specification of data frame and/or variables.") }	
 	if ( missing(min.perc.total)==TRUE ) { min.perc.total=0.01 }
-	if ( min.perc.total<0.01 || min.perc.total>0.2 || !is.numeric(min.perc.total) ) {
-		warning("Incorrect parameter specification; accepted min.perc.total parameter range is 0.01-0.2. Parameter was set to default (0.01).")
+	if ( min.perc.total<0.0001 || min.perc.total>0.2 || !is.numeric(min.perc.total) ) {
+		warning("Incorrect parameter specification; accepted min.perc.total parameter range is 0.0001-0.2. Parameter was set to default (0.01).")
 		min.perc.total=0.01
 	}
 	if ( missing(min.perc.class)==TRUE ) { min.perc.class=0 }

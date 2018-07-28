@@ -2,8 +2,8 @@ Package: woeBinning
 Type: Package
 Title: Supervised Weight of Evidence Binning of Numeric Variables and
         Factors
-Version: 0.1.5
-Date: 2017-12-14
+Version: 0.1.6
+Date: 2018-07-10
 Author: Thilo Eichenberg
 Maintainer: Thilo Eichenberg <te.r@gmx.net>
 Description: Implements an automated binning of numeric variables and factors with
@@ -20,6 +20,6 @@ License: GPL (>= 2)
 LazyData: TRUE
 RoxygenNote: 6.0.1
 NeedsCompilation: no
-Packaged: 2017-12-14 12:28:23 UTC; Thilo
+Packaged: 2018-07-10 17:55:11 UTC; MMT
 Repository: CRAN
-Date/Publication: 2017-12-15 12:58:29 UTC
+Date/Publication: 2018-07-28 16:40:02 UTC
