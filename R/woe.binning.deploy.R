@@ -27,9 +27,9 @@ woe.binning.deploy.2 <- function(df, pred.var, look.up.table, add.woe.or.dum.var
 			binned.var <- dfrm.binned[,1]
 			for ( level in unique(binned.var) ){
 				# Remove special characters from binned intervals
-				level <- gsub("(","",level, fixed = TRUE)
-				level <- gsub("]","",level, fixed = TRUE)
-				level <- gsub(",",".",level, fixed = TRUE)
+				#level <- gsub("(","",level, fixed = TRUE)
+				#level <- gsub("]","",level, fixed = TRUE)
+				#level <- gsub(",",".",level, fixed = TRUE)
 				dfrm.binned[paste("dum",pred.var,gsub(" ","",level),"binned",sep=".")] <- ifelse(binned.var==level,1,0)
 			}
 		}
